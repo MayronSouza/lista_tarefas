@@ -18,7 +18,32 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  List _todoList = [];
+  final _toDoController = TextEditingController();
+
+  List _toDoList = [];
+
+  @override
+  void initState() {
+    super.initState();
+
+    _readData().then((data) {
+      setState(() {
+        _toDoList = json.decode(data);
+      });
+    });
+  }
+
+  void _addToDo() {
+    setState(() {
+      Map<String, dynamic> newToDo = Map();
+      newToDo['title'] = _toDoController.text;
+      _toDoController.text = '';
+      newToDo['ok'] = false;
+      _toDoList.add(newToDo);
+
+      _saveData();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +61,7 @@ class _HomeState extends State<Home> {
               children: <Widget>[
                 Expanded(
                   child: TextField(
+                    controller: _toDoController,
                     decoration: InputDecoration(
                       labelText: 'Nova Tarefa',
                       labelStyle: TextStyle(color: Colors.cyan),
@@ -43,12 +69,33 @@ class _HomeState extends State<Home> {
                   ),
                 ),
                 RaisedButton(
-                  onPressed: () {},
+                  onPressed: _addToDo,
                   color: Colors.cyan,
                   child: Text('ADD'),
                   textColor: Colors.white,
                 )
               ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              padding: EdgeInsets.only(top: 8.0),
+              itemCount: _toDoList.length,
+              itemBuilder: (context, index) {
+                return CheckboxListTile(
+                  title: Text(_toDoList[index]['title']),
+                  value: (_toDoList[index]['ok']),
+                  secondary: CircleAvatar(
+                    child: Icon(
+                        _toDoList[index]['ok'] ? Icons.check : Icons.error),
+                  ),
+                  onChanged: (checked) {
+                    setState(() {
+                      _toDoList[index]['ok'] = checked;
+                    });
+                  },
+                );
+              },
             ),
           ),
         ],
@@ -64,7 +111,7 @@ class _HomeState extends State<Home> {
 
   // Função que salva no arquivo
   Future<File> _saveData() async {
-    String data = json.encode(_todoList);
+    String data = json.encode(_toDoList);
     final file = await _getFile();
 
     return file.writeAsString(data);
@@ -75,7 +122,7 @@ class _HomeState extends State<Home> {
     try {
       final file = await _getFile();
 
-      file.readAsString();
+      return file.readAsString();
     } catch (e) {
       return 'Error: $e';
     }
